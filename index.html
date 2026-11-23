@@ -62,23 +62,6 @@ html.touch,html.touch body{touch-action:none;overscroll-behavior:none;-webkit-us
 @supports (height:1dvh){#tc{--u:min(1dvh,.56vw)}}
 #tc.v{visibility:visible}
 #tc *{-webkit-tap-highlight-color:transparent;touch-action:none}
-
-/* direção por movimento do celular: a imagem acompanha a inclinação em sentido contrário */
-html.sensor-drive{--sensor-roll:0deg}
-html.sensor-drive #c{
-  transform:rotate(calc(var(--sensor-roll) * -1)) scale(1.16);transform-origin:50% 50%;
-}
-#tc #tmode{position:absolute;left:max(calc(var(--u)*2.8),env(safe-area-inset-left));top:max(calc(var(--u)*2.4),env(safe-area-inset-top));
-  min-height:40px;padding:0 13px;border:1px solid rgba(255,255,255,.2);border-radius:22px;color:#fff;background:rgba(10,12,15,.68);
-  font:600 12px/1 -apple-system,"Segoe UI",Roboto,Arial,sans-serif;pointer-events:auto;box-shadow:0 3px 12px rgba(0,0,0,.35)}
-#tc #tmode.active{border-color:#ff5a36;background:rgba(216,53,28,.78)}
-#tc.sensor .wheel{display:none!important}
-#tc.sensor .rt .peds{display:contents}
-#tc.sensor .gas,#tc.sensor .brake{position:absolute;bottom:max(calc(var(--u)*2.4),env(safe-area-inset-bottom));width:calc(var(--u)*25);height:calc(var(--u)*36)}
-#tc.sensor .gas{left:max(calc(var(--u)*3),env(safe-area-inset-left))}
-#tc.sensor .brake{right:max(calc(var(--u)*3),env(safe-area-inset-right))}
-#tc.sensor .hb{position:absolute;right:max(calc(var(--u)*34),calc(env(safe-area-inset-right) + 34px));bottom:max(calc(var(--u)*3),env(safe-area-inset-bottom))}
-#tc.sensor .rt{bottom:max(calc(var(--u)*2.4),env(safe-area-inset-bottom))}
 #tc:not([data-m="jogo"]) .only-play,#tc[data-m="bench"] .not-bench{visibility:hidden}
 
 /* volante */
@@ -129,6 +112,19 @@ transform-origin:50% 100%;opacity:0;transform:translateY(70%)}
 #tc .hb.on{box-shadow:inset 0 0 0 1.5px rgba(255,90,54,.7)}
 #tc .hb.on i{transform:translateY(calc(var(--u)*-9));background:var(--acc);box-shadow:inset 0 0 0 2px rgba(255,255,255,.5),0 0 calc(var(--u)*3) rgba(255,90,54,.75)}
 
+
+/* modo inclinação: sem volante, um pedal de cada lado, botão de alternar ao lado da pausa */
+#tc[data-s="tilt"] .wheel{display:none}
+#tc[data-s="tilt"] .rt,#tc[data-s="tilt"] .peds{display:contents}
+#tc[data-s="tilt"] .gas{position:absolute;right:max(calc(var(--u)*2.8),env(safe-area-inset-right));bottom:max(calc(var(--u)*2.4),env(safe-area-inset-bottom))}
+#tc[data-s="tilt"] .brake{position:absolute;left:max(calc(var(--u)*3),env(safe-area-inset-left));bottom:max(calc(var(--u)*2.4),env(safe-area-inset-bottom))}
+#tc[data-s="tilt"] .hb{position:absolute;left:calc(max(calc(var(--u)*3),env(safe-area-inset-left)) + var(--u)*28.4);bottom:max(calc(var(--u)*2.4),env(safe-area-inset-bottom))}
+#tc[data-s="tilt"] .acts{position:absolute;right:max(calc(var(--u)*2.8),env(safe-area-inset-right));bottom:calc(max(calc(var(--u)*2.4),env(safe-area-inset-bottom)) + var(--u)*38.4)}
+#tc #tmode{--s:max(40px,calc(var(--u)*9.5));position:absolute;top:max(calc(var(--u)*2.4),env(safe-area-inset-top));right:calc(max(calc(var(--u)*2.8),env(safe-area-inset-right)) + var(--s) + var(--u)*2.2)}
+#tc #tmode.act{box-shadow:inset 0 0 0 2px var(--acc),0 0 12px rgba(255,90,54,.4),0 4px 12px rgba(0,0,0,.4)}
+#c{transform-origin:50% 50%}
+#ttoast{position:fixed;left:50%;top:14vh;z-index:60;transform:translateX(-50%);max-width:84vw;padding:.55em 1.1em;border-radius:1.2em;background:rgba(9,11,14,.78);color:#fff;font-size:14px;text-align:center;pointer-events:none;opacity:0;transition:opacity .25s}
+#ttoast.v{opacity:1}
 @media (prefers-reduced-motion:reduce){#tc *,#tc *::after,#rot .ph{transition:none!important;animation:none!important}}
 #gx{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;background:rgba(6,8,10,.88);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#e6e8ea;font-size:clamp(13px,2.2vh,16px)}
 #gx .gc{width:min(760px,94vw);max-height:94vh;overflow:auto;box-sizing:border-box;padding:1.1em 1.4em 0;border-radius:1.1em;background:#12151a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 20px 60px rgba(0,0,0,.6);touch-action:pan-y;-webkit-overflow-scrolling:touch}
@@ -191,9 +187,9 @@ transform-origin:50% 100%;opacity:0;transform:translateY(70%)}
 <tr><td colspan="2" style="font-weight:400;color:#ddd;opacity:.75;padding-top:.5em">Câmbio automático · a volta conta<br>ao cruzar a linha de largada</td></tr>
 </table></div>
 <div class="tt"><div><h2>Pilotar</h2><table>
-<tr><td>Volante</td><td>arraste em círculo</td></tr>
-<tr><td>Pedal alto</td><td>acelera</td></tr>
-<tr><td>Pedal largo</td><td>freia e dá ré</td></tr>
+<tr><td id="hs0">Volante</td><td id="hs1">arraste em círculo</td></tr>
+<tr><td id="ha0">Pedal alto</td><td id="ha1">acelera</td></tr>
+<tr><td id="hf0">Pedal largo</td><td id="hf1">freia e dá ré</td></tr>
 <tr><td>(P)</td><td>freio de mão (segure)</td></tr>
 </table></div><div><h2>Botões</h2><table>
 <tr><td>Câmera</td><td>troca a vista</td></tr>
@@ -205,8 +201,8 @@ transform-origin:50% 100%;opacity:0;transform:translateY(70%)}
 <div class="bt"><button id="b0">Começar</button><button id="b1">Benchmark</button></div>
 </div></div>
 <div id="tc" data-m="">
-<button id="tmode" type="button" aria-label="Alternar direção por sensores">↔ Volante</button>
 <button class="tb" id="tp" style="--i:5" aria-label="Pausar"><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg></button>
+<button class="tb only-play" id="tmode" style="--i:6" aria-label="Alternar entre volante e inclinação"><svg viewBox="0 0 24 24" id="tmi"></svg><small id="tml">Inclinar</small></button>
 <div class="wheel only-play" id="tw" role="slider" aria-label="Volante">
 <svg viewBox="-104 -104 208 208">
 <defs>
@@ -241,6 +237,7 @@ transform-origin:50% 100%;opacity:0;transform:translateY(70%)}
 </div>
 </div>
 </div>
+<div id="ttoast"></div>
 <div id="rot"><svg viewBox="0 0 64 64"><g class="ph"><rect x="22" y="6" width="20" height="40" rx="4.5"/><rect class="btn" x="29" y="40" width="6" height="2.4" rx="1.2"/></g></svg><div>Gire o celular para jogar na horizontal</div></div>
 <script>
 (()=>{'use strict';
@@ -8470,8 +8467,15 @@ function gfxApply() {
 }
 // ---- controles de toque (celular e tablet): volante, pedais e botões.
 // Entram no jogo pelo mesmo caminho do controle: acelerador, freio e direção analógicos em VIN, mais as teclas de sempre.
-const TCH = { on: false, el: null, m: '', raf: 0, last: 0, thr: 0, brk: 0, tThr: 0, tBrk: 0, str: 0, held: 0, pul: 0, t0: {}, port0: false, sensor: false, sensorReady: false, sensorBase: null, sensorRoll: 0, sensorLast: 0, modeBtn: null,
-  w: { pid: null, last: 0, rot: 0, vel: 0, prev: 0, cx: 0, cy: 0, a: -1 } };
+const TCH = { on: false, el: null, m: '', raf: 0, last: 0, thr: 0, brk: 0, tThr: 0, tBrk: 0, str: 0, held: 0, pul: 0, t0: {}, port0: false,
+  w: { pid: null, last: 0, rot: 0, vel: 0, prev: 0, cx: 0, cy: 0, a: -1 },
+  tilt: false, want: false, tL: false, tGot: 0, tRaw: 0, tSm: 0, tVis: 0, tShown: 0, tTo: 0, tBoot: false, cv: null };
+// modo inclinação: o celular vira o volante (sensor de orientação); a imagem gira ao contrário para o jogo parecer reto
+const T_TILT_MAX = 32, T_TILT_DZ = 1.5;   // graus: esterço total e zona morta no centro
+const T_TILT_ZOOM = 1;                    // 1 = amplia o quadro até cobrir a tela (sem cantos pretos); 0 = sem ampliar (cantos pretos)
+const T_TILT_VIS = 55;                    // graus: o quadro para de girar além disso
+const TLT_ICON_TILT = '<rect x="8" y="3" width="8" height="14" rx="2" transform="rotate(-28 12 10)"/><path d="M5 20a9 9 0 0014 0"/><path d="M19 17v3h-3"/>';
+const TLT_ICON_WHEEL = '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.2"/><path d="M3.8 11h6M14.2 11h6M12 14v6.5"/>';
 const T_MAXROT = 110, T_ARC = 2 * Math.PI * 97 * (T_MAXROT / 360);   // meia volta e um pouco: o batente do volante, em graus
 function touchMerge(k) {
   const t = TCH;
@@ -8509,45 +8513,94 @@ function tTap(el, fn, onUp) {
   const end = e => { if (e.pointerId !== el._p) return; el._p = null; el.classList.remove('on'); if (onUp && e.type === 'pointerup') fn(); };
   for (const n of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(n, end);
 }
-function sensorAngleDelta(a, b) { let d = a - b; while (d > 180) d -= 360; while (d < -180) d += 360; return d; }
-function touchSensorEvent(e) {
-  const T = TCH; if (!T.sensor || typeof e.alpha !== 'number') return;
-  if (T.sensorBase == null) { T.sensorBase = e.alpha; return; }
-  // alpha acompanha a rotação do aparelho no plano da tela; a imagem é compensada no sentido oposto.
-  const d = sensorAngleDelta(e.alpha, T.sensorBase);
-  T.sensorRoll = Math.max(-24, Math.min(24, d));
-  const u = Math.max(-1, Math.min(1, d / 22));
-  T.sensorLast = performance.now();
-  T.str = Math.abs(u) < .035 ? 0 : Math.sign(u) * Math.pow(Math.abs(u), .82);
-  document.documentElement.style.setProperty('--sensor-roll', T.sensorRoll.toFixed(2) + 'deg');
+
+// ---- modo inclinação ----
+function tToast(msg) {
+  const el = $('ttoast'); if (!el) return; el.textContent = msg; el.classList.add('v');
+  clearTimeout(TCH.tToastT); TCH.tToastT = setTimeout(() => el.classList.remove('v'), 2800);
 }
-async function touchToggleSensor() {
+function tiltScreenAngle() {
+  const a = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (typeof window.orientation === 'number' ? window.orientation : 0);
+  return ((Math.round(a / 90) * 90) % 360 + 360) % 360;
+}
+// ângulo (graus, + = sentido horário visto de frente) do celular em volta do eixo da tela, a partir da gravidade em beta/gamma
+function tiltRead(e) {
+  const T = TCH; if (e.beta == null || e.gamma == null) return;
+  T.tGot++;
+  const rb = e.beta * 0.017453292, rg = e.gamma * 0.017453292;
+  const ux = -Math.sin(rg) * Math.cos(rb), uy = Math.sin(rb);   // direção "para cima" no referencial do aparelho (x = direita, y = topo em pé)
+  if (ux * ux + uy * uy < 0.09) return;                         // aparelho quase deitado: o ângulo não é definido
+  const a = tiltScreenAngle();
+  const th = a === 90 ? Math.atan2(uy, ux) : a === 270 ? Math.atan2(-uy, -ux) : a === 180 ? Math.atan2(ux, -uy) : Math.atan2(-ux, uy);
+  T.tRaw = th * 57.29578;
+}
+function tiltSave() { try { localStorage.setItem('uno-tilt', TCH.want ? '1' : '0'); } catch (e) { /* vale só nesta sessão */ } }
+function tiltView(a) {
+  const T = TCH, c = T.cv || (T.cv = $('c')); if (!c) return;
+  if (Math.abs(a - T.tShown) < 0.03) return; T.tShown = a;
+  if (Math.abs(a) < 0.03) { c.style.transform = ''; c.style.willChange = ''; return; }
+  const v = Math.max(-T_TILT_VIS, Math.min(T_TILT_VIS, a)), r = Math.abs(v) * 0.017453292;
+  const cover = Math.cos(r) + Math.max(innerWidth / innerHeight, innerHeight / innerWidth) * Math.sin(r);
+  c.style.transform = 'rotate(' + (-v).toFixed(2) + 'deg) scale(' + (1 + T_TILT_ZOOM * (cover - 1)).toFixed(3) + ')';
+  c.style.willChange = 'transform';
+}
+function tiltSteer() {
+  const T = TCH, a = T.tSm < 0 ? -T.tSm : T.tSm;
+  if (a <= T_TILT_DZ) return 0;
+  const n = Math.min(1, (a - T_TILT_DZ) / (T_TILT_MAX - T_TILT_DZ));
+  return (T.tSm < 0 ? -1 : 1) * n * (0.4 + 0.6 * n);
+}
+function tiltUI() {
+  const T = TCH, tl = T.tilt;
+  if (T.el) T.el.dataset.s = tl ? 'tilt' : 'wheel';
+  if (T.tm) { T.tm.classList.toggle('act', tl); $('tmi').innerHTML = tl ? TLT_ICON_WHEEL : TLT_ICON_TILT; $('tml').textContent = tl ? 'Volante' : 'Inclinar'; }
+  if (T.b4) T.b4.textContent = 'Direção: ' + (tl ? 'inclinar o celular' : 'volante');
+  const set = (id, t) => { const el = $(id); if (el) el.textContent = t; };
+  set('hs0', tl ? 'Direção' : 'Volante'); set('hs1', tl ? 'incline o celular' : 'arraste em círculo');
+  set('ha0', tl ? 'Pedal direito' : 'Pedal alto'); set('hf0', tl ? 'Pedal esquerdo' : 'Pedal largo');
+  if (!tl) tiltView(0);
+}
+function tiltDisable(save) {
+  const T = TCH; T.tilt = false; if (save !== false) { T.want = false; tiltSave(); }
+  clearTimeout(T.tTo); if (T.tL) { removeEventListener('deviceorientation', tiltRead); T.tL = false; }
+  T.tSm = T.tVis = T.tRaw = 0; tiltUI();
+}
+function tiltEnable() {
   const T = TCH;
-  if (T.sensor) {
-    T.sensor = false; T.sensorBase = null; T.sensorRoll = 0; T.str = 0;
-    document.documentElement.classList.remove('sensor-drive'); document.documentElement.style.setProperty('--sensor-roll','0deg');
-    T.el.classList.remove('sensor'); T.modeBtn.classList.remove('active'); T.modeBtn.textContent = '↔ Volante';
-    return;
-  }
-  try {
-    if (typeof DeviceOrientationEvent === 'undefined') throw new Error('Sensor de movimento indisponível neste navegador.');
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      const permission = await DeviceOrientationEvent.requestPermission();
-      if (permission !== 'granted') throw new Error('Permissão do sensor negada.');
-    }
-    T.sensor = true; T.sensorBase = null; T.sensorRoll = 0; T.str = 0;
-    document.documentElement.classList.add('sensor-drive'); T.el.classList.add('sensor');
-    T.modeBtn.classList.add('active'); T.modeBtn.textContent = '◉ Sensores';
-    addEventListener('deviceorientation', touchSensorEvent, true);
-  } catch (err) {
-    T.sensor = false; T.modeBtn.textContent = '↔ Volante';
-    alert(err && err.message ? err.message : 'Não foi possível ativar os sensores.');
-  }
+  const go = () => {
+    T.tilt = true; T.want = true; tiltSave(); T.tGot = 0;
+    if (!T.tL) { addEventListener('deviceorientation', tiltRead); T.tL = true; }
+    clearTimeout(T.tTo);
+    T.tTo = setTimeout(() => { if (T.tilt && !T.tGot) { tiltDisable(); tToast('Este aparelho não enviou dados do sensor de inclinação. Voltei para o volante.'); } }, 1800);
+    tiltUI(); tToast('Inclinação ligada: gire o celular como um volante');
+  };
+  const D = window.DeviceOrientationEvent;
+  if (D && typeof D.requestPermission === 'function') {   // iOS: pede permissão, e só dentro de um toque
+    let p; try { p = D.requestPermission(); } catch (e) { p = null; }
+    if (!p || !p.then) { tiltDisable(); tToast('Não consegui acessar o sensor de movimento.'); return; }
+    p.then(r => { if (r === 'granted') go(); else { tiltDisable(); tToast('Permissão do sensor negada. Libere "Movimento e orientação" nos ajustes do Safari.'); } })
+      .catch(() => { tiltDisable(); tToast('Não consegui acessar o sensor de movimento (precisa de HTTPS).'); });
+  } else go();
+}
+function tiltToggle() {
+  if (TCH.tilt) { tiltDisable(); tToast('Volante na tela'); } else tiltEnable();
+}
+// preferência salva: Android liga na hora; iOS espera o primeiro toque (a permissão exige um gesto)
+function tiltBoot() {
+  const T = TCH; if (!T.want || T.tilt || T.tBoot || !T.on) return; T.tBoot = true;
+  const D = window.DeviceOrientationEvent;
+  if (D && typeof D.requestPermission === 'function') {
+    const h = e => {
+      if (e.target && e.target.closest && e.target.closest('[data-tg]')) { rm(); return; }
+      rm(); tiltEnable();
+    };
+    const rm = () => { removeEventListener('click', h, true); removeEventListener('touchend', h, true); };
+    addEventListener('click', h, true); addEventListener('touchend', h, true);
+  } else tiltEnable();
 }
 function touchInit() {
   const T = TCH, w = T.w; T.el = $('tc'); if (!T.el) return;
   const root = document.documentElement;
-  T.modeBtn = $('tmode'); T.modeBtn.addEventListener('click', touchToggleSensor);
   T.wheel = $('tw'); T.wr = $('wr'); T.aL = $('aL'); T.aR = $('aR'); T.trl = $('trl');
   T.pG = $('tgs'); T.pB = $('tbk'); T.fG = T.pG.querySelector('.fill'); T.fB = T.pB.querySelector('.fill');
   T.el.addEventListener('contextmenu', e => e.preventDefault());
@@ -8577,11 +8630,16 @@ function touchInit() {
   const bt = document.querySelector('#ui .bt');
   T.b2 = document.createElement('button'); T.b2.textContent = 'Assistir volta'; T.b2.onclick = () => uiReplay();
   T.b3 = document.createElement('button'); T.b3.onclick = () => { sndMute(!SND.mute); touchSync(UI.st); };
-  bt.append(T.b2, T.b3);
+  T.b4 = document.createElement('button'); T.b4.setAttribute('data-tg', '1'); T.b4.onclick = () => tiltToggle();
+  bt.append(T.b2, T.b3, T.b4);
+  T.tm = $('tmode'); T.tm.setAttribute('data-tg', '1'); T.tm.addEventListener('click', e => { e.preventDefault(); tBuzz(); tiltToggle(); });
+  try { T.want = localStorage.getItem('uno-tilt') === '1'; } catch (e) { T.want = false; }
+  tiltUI();
   // habilita por tela sensível ao toque; num computador com tela de toque, habilita no primeiro toque
-  T.enable = () => { if (T.on) return; T.on = true; root.classList.add('touch'); touchSync(UI.st); };
+  T.enable = () => { if (T.on) return; T.on = true; root.classList.add('touch'); touchSync(UI.st); tiltBoot(); };
   if (matchMedia('(pointer:coarse)').matches || /[?&]touch=1\b/.test(location.search)) { T.on = true; root.classList.add('touch'); }
   addEventListener('pointerdown', e => { if (e.pointerType === 'touch') T.enable(); }, true);
+  tiltBoot();
   // em pé o jogo pausa e pede o celular deitado; se a página abriu em pé, a resolução é recalculada recarregando
   const mp = matchMedia('(orientation:portrait)'); T.port0 = mp.matches;
   const onOri = () => {
@@ -8596,6 +8654,7 @@ function touchReset() {
   if (!T.el) return;
   for (const e of T.el.querySelectorAll('.on')) { e.classList.remove('on'); e._p = null; }
   T.wr.setAttribute('transform', 'rotate(0)'); T.aL.style.strokeDasharray = T.aR.style.strokeDasharray = '0 700';
+  T.tSm = T.tVis = T.tRaw; tiltView(0);
   T.fG.style.transform = T.fB.style.transform = 'scaleY(0)';
 }
 // mostra ou esconde os controles conforme o estado do jogo (chamado por uiSet)
@@ -8603,11 +8662,12 @@ function touchSync(st) {
   const T = TCH; if (!T.el) return;
   const m = !T.on ? '' : st === ST.JOGO ? 'jogo' : st === ST.FITA ? 'fita' : st === ST.BENCH ? 'bench' : '';
   if (m !== T.m) { touchReset(); T.m = m; }
-  if (m) { T.el.dataset.m = m; T.el.classList.add('v'); T.modeBtn.style.display = m === 'jogo' ? '' : 'none'; if (!T.raf) { T.last = 0; T.raf = requestAnimationFrame(touchLoop); } }
-  else { T.modeBtn.style.display = 'none'; T.el.classList.remove('v'); }
+  if (m) { T.el.dataset.m = m; T.el.classList.add('v'); if (!T.raf) { T.last = 0; T.raf = requestAnimationFrame(touchLoop); } }
+  else T.el.classList.remove('v');
   const menu = st === ST.PAUSA || st === ST.RESULT;
   T.b2.style.display = T.on && menu && GS.replay ? '' : 'none';
   T.b3.style.display = T.on && menu ? '' : 'none';
+  T.b4.style.display = T.on && (menu || st === ST.INICIO) ? '' : 'none';
   T.b3.textContent = 'Som: ' + (SND.mute ? 'desligado' : 'ligado');
   T.trl.textContent = m === 'fita' ? 'Dirigir' : 'À pista';
   if (T.on && UI.tag) {
@@ -8619,7 +8679,9 @@ function touchLoop(t) {
   const T = TCH, w = T.w;
   if (!T.el.classList.contains('v')) { T.raf = 0; return; }
   const dt = T.last ? Math.min((t - T.last) / 1000, 0.05) : 1 / 60; T.last = t;
-  if (w.pid != null) w.vel += (((w.rot - w.prev) / (dt || 0.016)) - w.vel) * 0.35;   // guarda a velocidade do dedo: a mola continua dali
+  const tilt = T.tilt && T.m === 'jogo';
+  if (tilt) { w.rot = 0; w.vel = 0; w.pid = null; }
+  else if (w.pid != null) w.vel += (((w.rot - w.prev) / (dt || 0.016)) - w.vel) * 0.35;   // guarda a velocidade do dedo: a mola continua dali
   else {
     w.vel += (-160 * w.rot - 16 * w.vel) * dt; w.rot += w.vel * dt;
     if (w.rot > T_MAXROT) { w.rot = T_MAXROT; w.vel = 0; } else if (w.rot < -T_MAXROT) { w.rot = -T_MAXROT; w.vel = 0; }
@@ -8627,10 +8689,14 @@ function touchLoop(t) {
   }
   w.prev = w.rot;
   const u = w.rot / T_MAXROT, au = u < 0 ? -u : u;
-  if (!T.sensor) T.str = au < 0.01 ? 0 : (u < 0 ? -1 : 1) * au * (0.4 + 0.6 * au);   // curva suave no centro, como a do controle
+  if (tilt) {
+    T.tSm += (T.tRaw - T.tSm) * (1 - Math.exp(-dt * 22));    // direção: filtrada
+    T.tVis += (T.tRaw - T.tVis) * (1 - Math.exp(-dt * 50));  // imagem: quase sem atraso
+    T.str = tiltSteer(); tiltView(T.tVis);
+  } else T.str = au < 0.01 ? 0 : (u < 0 ? -1 : 1) * au * (0.4 + 0.6 * au);   // curva suave no centro, como a do controle
   const sm = (cur, tg) => { cur += (tg - cur) * (1 - Math.exp(-dt * (tg > cur ? 14 : 30))); return tg === 1 && cur > 0.985 ? 1 : tg === 0 && cur < 0.02 ? 0 : cur; };
   T.thr = sm(T.thr, T.tThr); T.brk = sm(T.brk, T.tBrk);
-  T.wr.setAttribute('transform', 'rotate(' + (T.sensor ? 0 : w.rot).toFixed(1) + ')');
+  T.wr.setAttribute('transform', 'rotate(' + w.rot.toFixed(1) + ')');
   const a = Math.round(au * T_ARC * 10);
   if (a !== w.a) { w.a = a; const s = (au * T_ARC).toFixed(1) + ' 700'; (u > 0 ? T.aR : T.aL).style.strokeDasharray = s; (u > 0 ? T.aL : T.aR).style.strokeDasharray = '0 700'; }
   T.fG.style.transform = 'scaleY(' + T.thr.toFixed(3) + ')'; T.fB.style.transform = 'scaleY(' + T.brk.toFixed(3) + ')';

@@ -132,6 +132,7 @@ transform-origin:50% 100%;opacity:0;transform:translateY(70%)}
 #gx .gb{display:grid;grid-template-columns:1fr 1fr;gap:.9em 1.6em}
 #gx .gr{min-width:0}
 #gx .full{grid-column:1/-1}
+#gx .gxsec{grid-column:1/-1;margin:.35em 0 -.25em;padding:.55em 0 .35em;border-bottom:1px solid rgba(255,255,255,.12);font-size:.82em;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:#ff9476}
 #gx .gl{margin:0 0 .35em;font-weight:600;color:#fff}
 #gx .gl b{margin-left:.4em;color:#ff7a5a;font-weight:700}
 #gx .gs{margin-top:.35em;font-size:.82em;opacity:.65}
@@ -144,7 +145,9 @@ transform-origin:50% 100%;opacity:0;transform:translateY(70%)}
 #gx .gn{margin:1em 0 0;font-size:.85em;opacity:.7;line-height:1.45}
 #gx .gf{position:sticky;bottom:0;display:flex;gap:.6em;justify-content:flex-end;padding:.8em 0 1em;margin-top:.4em;background:linear-gradient(rgba(18,21,26,0),#12151a 30%)}
 #gx .gf .ga{background:#d8351c}
-@media (max-width:560px){#gx .gb{grid-template-columns:1fr}}
+#gx .gxsec:first-child{margin-top:0}
+@media (max-width:560px){#gx .gb{grid-template-columns:1fr}#gx .gxsec{margin-top:.65em}}
+
 @media (prefers-reduced-motion:reduce){#gx *{transition:none!important}}
 </style>
 </head>
@@ -723,7 +726,7 @@ fn sunVis1(wp: vec3f) -> f32 {
     let R = clamp(zl * 0.11, 0.35, 1.6);                // raio em metros, cresce com a distância
     let ps = F.screen.y * 0.5 / F.post.y;
     let rpx = clamp(R * ps / zl, 5.0, 96.0);
-    var occ = 0.0; const NS = 14;
+    var occ = 0.0; const NS = AO_SAMPLES;
     for (var i = 0; i < NS; i++) {
       let r = (f32(i) + 0.5 + noise * 0.5) / f32(NS); let a = (f32(i) * 2.39996 + noise * 6.2832);
       let sp = fp + vec2f(cos(a), sin(a)) * rpx * r;
@@ -737,7 +740,7 @@ fn sunVis1(wp: vec3f) -> f32 {
   // névoa: fração iluminada ao longo do raio
   let wpp = F.invViewProjJ * vec4f(fp.x * F.screen.z * 2.0 - 1.0, 1.0 - fp.y * F.screen.w * 2.0, max(d, 1e-5), 1.0);
   let wp = wpp.xyz / wpp.w; let cam = F.camPos.xyz; let dv = wp - cam; let dist = length(dv); let dir = dv / dist;
-  let tMax = min(dist, VOL_DIST); const NV = 20; var wsum = 1e-6; var vsum = 0.0; var T = 1.0; var tp = 0.0;
+  let tMax = min(dist, VOL_DIST); const NV = FOG_SAMPLES; var wsum = 1e-6; var vsum = 0.0; var T = 1.0; var tp = 0.0;
   let j2 = fract(noise + 0.618 * f32(pxi.x & 1) + 0.31 * f32(pxi.y & 1));
   for (var i = 0; i < NV; i++) {
     let f1 = (f32(i) + 1.0) / f32(NV); let tn = tMax * f1 * f1; let dt = tn - tp; let t = tp + dt * j2; tp = tn;
@@ -2976,10 +2979,12 @@ function halton(i, b) { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % 
 const Q = new URLSearchParams(location.search);
 // ---- configurações gráficas: guardadas no aparelho e lidas antes de criar a GPU (resolução, sombras e ambiente são fixados na criação)
 const GFX_PRESETS = {
-  baixa: { scale: 0.6, shadow: 1024, shadowS: 2048, env: 256, envFaces: 1, ssr: 0, mb: 0, veg: 1, fps: 30 },
-  media: { scale: 0.75, shadow: 1024, shadowS: 2048, env: 256, envFaces: 1, ssr: 1, mb: 1, veg: 1, fps: 'auto' },
-  alta: { scale: 1, shadow: 2048, shadowS: 4096, env: 512, envFaces: 2, ssr: 1, mb: 1, veg: 1, fps: 'auto' },
-  ultra: { scale: 1.25, shadow: 2048, shadowS: 4096, env: 512, envFaces: 2, ssr: 1, mb: 1, veg: 1, fps: 'max' },
+  // Os níveis Econômico/Equilibrado reduzem amostras e atualizações de mapas temporais;
+  // a resolução principal continua sendo o controle mais importante da carga da GPU.
+  baixa: { scale: 0.6, shadow: 768, shadowS: 1536, env: 192, envFaces: 1, envRate: 3, shadowHz: 30, aoSamples: 6, fogSamples: 8, ssr: 0, mb: 0, veg: 1, fps: 30 },
+  media: { scale: 0.75, shadow: 1024, shadowS: 2048, env: 256, envFaces: 1, envRate: 2, shadowHz: 30, aoSamples: 8, fogSamples: 12, ssr: 1, mb: 0, veg: 1, fps: 'auto' },
+  alta: { scale: 1, shadow: 2048, shadowS: 4096, env: 512, envFaces: 2, envRate: 1, shadowHz: 60, aoSamples: 14, fogSamples: 20, ssr: 1, mb: 1, veg: 1, fps: 'auto' },
+  ultra: { scale: 1.25, shadow: 2048, shadowS: 4096, env: 512, envFaces: 2, envRate: 1, shadowHz: 60, aoSamples: 14, fogSamples: 20, ssr: 1, mb: 1, veg: 1, fps: 'max' },
 };
 // do estado gravado (st) para as opções em uso. 'auto' usa o resultado da calibração (st.cal); sem ela, parte de Média no celular e de Alta no computador
 function gfxResolve(st, touch, forced) {
@@ -3776,7 +3781,8 @@ function worldMapBuild() {
 // Núcleo do renderizador diferido: recursos, uniformes de quadro, famílias de material e o grafo de passes.
 const SHADOW_RES = GFX.s.shadow, SHADOW_S_RES = GFX.s.shadowS, ENV_RES = GFX.s.env, ENV_FACES = GFX.s.envFaces, ENV_MIPS = 7, SKY_W = 4096, SKY_H = 1024, VOL_DIST = 220;
 const SKY_EL0 = -0.14, SKY_ELR = PI / 2 + 0.14;
-const SH_DEFS = { SHADOW_RES: SHADOW_RES + '.0', ENV_MIPS: ENV_MIPS + '.0', ENV_MIP_K: (ENV_RES * 2 / (PI * 1.5)).toFixed(2), VOL_DIST: VOL_DIST + '.0', SKY_EL0: SKY_EL0.toFixed(5), SKY_ELR: SKY_ELR.toFixed(5) };
+const SHADOW_HZ = GFX.s.shadowHz || 60, ENV_RATE = GFX.s.envRate || 1;
+const SH_DEFS = { SHADOW_RES: SHADOW_RES + '.0', ENV_MIPS: ENV_MIPS + '.0', ENV_MIP_K: (ENV_RES * 2 / (PI * 1.5)).toFixed(2), VOL_DIST: VOL_DIST + '.0', SKY_EL0: SKY_EL0.toFixed(5), SKY_ELR: SKY_ELR.toFixed(5), AO_SAMPLES: String(GFX.s.aoSamples || 14), FOG_SAMPLES: String(GFX.s.fogSamples || 20) };
 const KIND = { GBUF: 0, SHADOW: 1, CUBE: 2 };
 
 // ---- struct Frame: lista de campos gera o WGSL e os deslocamentos ----
@@ -4085,27 +4091,36 @@ function apiPass(enc, desc) { return enc.beginRenderPass(desc); }
 function apiFinish(enc) { return enc.finish(); }
 function apiCanvasView() { return G.ctx.getCurrentTexture().createView(); }
 function renderFrame() {
-  const dev = G.dev, c = R.cam, D = R.pd;
+  const dev = G.dev, c = R.cam, D = R.pd, now = performance.now();
   frameUniforms();
-  for (let i = 0; i < 3; i++) cascadeSetup(i);
+  // Cascatas dinâmicas podem ser atualizadas a 30 Hz: entre atualizações, a última sombra é reutilizada.
+  // Em captura/testes, mantém atualização em todos os quadros para resultados determinísticos.
+  const shadowDue = GAME.capture || R.forceShadowUpdate || !R.lastShadowUpdate || now - R.lastShadowUpdate >= (1000 / SHADOW_HZ);
+  if (shadowDue) for (let i = 0; i < 3; i++) cascadeSetup(i);
   setPass(0, c.vpJ, c.pos);
-  for (let i = 0; i < 3; i++) setPass(1 + i, R.casc.vp[i], c.pos);
-  // uma face do cubemap de ambiente por quadro (ciclo completo a cada 6 quadros)
-  // duas faces do cubemap de ambiente por quadro, cada uma na posição atual do carro (ciclo completo a cada 3 quadros)
-  const face = (R.frameIdx * ENV_FACES) % 6; R.cube.cur.set(R.cube.pos);
-  for (let k = 0; k < ENV_FACES; k++) { cubeSetup(face + k); setPass(5 + face + k, R.cube.vp, R.cube.cur); m4inv(R.cube.view, R.cube.vp); R.passData.set(R.cube.view, (11 + k) * 64); }
+  if (shadowDue) for (let i = 0; i < 3; i++) setPass(1 + i, R.casc.vp[i], c.pos);
+  // O cubemap continua sendo atualizado por partes; espaçar os ciclos reduz draws sem congelar o restante da cena.
+  const envDue = GAME.capture || R.forceEnvUpdate || (R.frameIdx % ENV_RATE === 0);
+  const envStep = (GAME.capture || R.forceEnvUpdate) ? R.frameIdx : Math.floor(R.frameIdx / ENV_RATE);
+  const face = (envStep * ENV_FACES) % 6;
+  if (envDue) {
+    R.cube.cur.set(R.cube.pos);
+    for (let k = 0; k < ENV_FACES; k++) { cubeSetup(face + k); setPass(5 + face + k, R.cube.vp, R.cube.cur); m4inv(R.cube.view, R.cube.vp); R.passData.set(R.cube.view, (11 + k) * 64); }
+  }
   dev.queue.writeBuffer(R.frameBuf, 0, FR.data);
   dev.queue.writeBuffer(R.passBuf, 0, R.passData, 0, 13 * 64);
   dev.queue.writeBuffer(R.objBuf, 0, R.objData, 0, R.objCount * 64);
   for (let i = 0; i < R.preFrame.length; i++) R.preFrame[i]();
   const enc = apiEncoder();
-  // sombras
-  for (let i = 0; i < 3; i++) {
-    const p = apiPass(enc, D.shadow[i]);
-    drawAll(p, ctxFrom(KIND.SHADOW, R.casc.vp[i], 6, c.pos, i), 1 + i, R.passBG); p.end();
+  // sombras: quando não vencem a cadência configurada, reutiliza as cascatas anteriores.
+  if (shadowDue) {
+    for (let i = 0; i < 3; i++) {
+      const p = apiPass(enc, D.shadow[i]);
+      drawAll(p, ctxFrom(KIND.SHADOW, R.casc.vp[i], 6, c.pos, i), 1 + i, R.passBG); p.end();
+    }
   }
-  // faces do cubemap de ambiente
-  for (let k = 0; k < ENV_FACES; k++) {
+  // faces do cubemap de ambiente (pode ficar alguns quadros sem atualização no modo econômico).
+  if (envDue) for (let k = 0; k < ENV_FACES; k++) {
     const f = face + k; cubeSetup(f);
     const p = apiPass(enc, D.cube[f]);
     cubeSky(p, 11 + k);
@@ -4120,6 +4135,7 @@ function renderFrame() {
   postFrame(enc);
   perfResolve(enc);
   R.submitArr[0] = apiFinish(enc); dev.queue.submit(R.submitArr);
+  if (shadowDue) R.lastShadowUpdate = now;
   perfAfterSubmit();
   R.frameIdx++;
 }
@@ -8320,8 +8336,10 @@ async function main() {
     renderStaticShadow();
     if (GAME.init) GAME.init();
     else { setCamera(6, 2.2, 7, 0, 0.6, 0, 0.9); R.cube.pos.set([0, 1.2, 0]); }
-    // aquece o cubemap de ambiente e calcula a luz ambiente (SH) a partir dele; duas rodadas para incluir o rebote
+    // aquece o cubemap de ambiente por completo antes de habilitar as atualizações espaçadas.
+    R.forceEnvUpdate = true;
     for (let k = 0; k < 2; k++) { for (let i = 0; i < 6; i++) renderFrame(); await computeSH(); }
+    R.forceEnvUpdate = false;
     if (GAME.prewarm) {
       const worst = await GAME.prewarm(); await computeSH();
       // Cadência: a 120 Hz só sobram 8,3 ms por quadro. Se a vista mais pesada não cabe com folga, os quadros se enfileiram
@@ -8355,7 +8373,7 @@ function rafLoop(t) {
 }
 // ---- menu de gráficos e tela cheia
 const GX = { el: null, dp: 'auto', d: null, fs: false, open: false, body: null, btnA: null, note: null };
-const GFX_KEYS = ['scale', 'shadow', 'shadowS', 'env', 'envFaces', 'ssr', 'mb', 'veg'];   // valem só depois de recarregar
+const GFX_KEYS = ['scale', 'shadow', 'shadowS', 'env', 'envFaces', 'envRate', 'shadowHz', 'aoSamples', 'fogSamples', 'ssr', 'mb', 'veg'];   // valem só depois de recarregar
 function gfxIsFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
 function gfxFs(on) {
   const de = document.documentElement;
@@ -8473,10 +8491,21 @@ function gfxDraw() {
   sl.oninput = () => { edit('scale', sl.value / 100); const p = gfxPx(d.scale); rr.querySelector('b').textContent = sl.value + '%'; rr.querySelector('.gs').textContent = p[0] + ' × ' + p[1] + ' pixels — o antisserrilhado temporal mantém a imagem limpa em resoluções menores'; gfxNote(); pr.querySelectorAll('button').forEach(b => b.classList.remove('on')); };
   B.append(rr);
   B.append(gfxSeg('Quadros por segundo', 'fps', [['auto', 'Auto'], [30, '30'], [60, '60'], ['max', 'Máximo']], d.fps, v => edit('fps', v)));
-  B.append(gfxSeg('Sombras', 'sh', [[1024, 'Médias'], [2048, 'Altas']], d.shadow, v => { edit('shadow', v); d.shadowS = v === 2048 ? 4096 : 2048; }));
-  B.append(gfxSeg('Reflexos do cenário', 'env', [[256, 'Leves'], [512, 'Normais']], d.env, v => { edit('env', v); d.envFaces = v === 512 ? 2 : 1; }));
-  B.append(gfxSeg('Reflexos na pista molhada', 'ssr', [[0, 'Desligados'], [1, 'Ligados']], d.ssr, v => edit('ssr', v)));
+  const section = label => { const h = document.createElement('div'); h.className = 'gxsec'; h.textContent = label; B.append(h); };
+  section('Iluminação e sombras');
+  B.append(gfxSeg('Resolução das sombras', 'sh', [[512, '512'], [768, '768'], [1024, '1024'], [1536, '1536'], [2048, '2048']], d.shadow, v => {
+    edit('shadow', v); d.shadowS = ({512:1024, 768:1536, 1024:2048, 1536:3072, 2048:4096})[v];
+  }));
+  B.append(gfxSeg('Atualização das sombras', 'shhz', [[30, '30 Hz · leve'], [60, '60 Hz · suave']], d.shadowHz, v => edit('shadowHz', v)));
+  section('Reflexos');
+  B.append(gfxSeg('Resolução dos reflexos do cenário', 'env', [[128, '128'], [192, '192'], [256, '256'], [384, '384'], [512, '512']], d.env, v => { edit('env', v); d.envFaces = v >= 384 ? 2 : 1; }));
+  B.append(gfxSeg('Atualização dos reflexos', 'envrate', [[1, 'Todo quadro'], [2, 'Alternados'], [3, 'A cada 3']], d.envRate, v => edit('envRate', v)));
+  B.append(gfxSeg('Reflexos na pista molhada (SSR)', 'ssr', [[0, 'Desligados'], [1, 'Ligados']], d.ssr, v => edit('ssr', v)));
+  section('Pós-processamento');
+  B.append(gfxSeg('Oclusão de ambiente', 'ao', [[6, 'Econômica'], [10, 'Equilibrada'], [14, 'Detalhada']], d.aoSamples, v => edit('aoSamples', v)));
+  B.append(gfxSeg('Amostras da névoa volumétrica', 'fog', [[8, '8 · leve'], [12, '12 · média'], [20, '20 · alta']], d.fogSamples, v => edit('fogSamples', v)));
   B.append(gfxSeg('Desfoque de movimento', 'mb', [[0, 'Desligado'], [1, 'Ligado']], d.mb, v => edit('mb', v)));
+  section('Cenário');
   B.append(gfxSeg('Árvores e vegetação', 'veg', [[0, 'Desligadas'], [1, 'Ligadas']], d.veg, v => edit('veg', v)));
   if (GFX.canFs) B.append(gfxSeg('Iniciar em tela cheia', 'fs', [[false, 'Não'], [true, 'Sim']], GX.fs, v => { GX.fs = v; }));
   gfxNote();
@@ -8490,8 +8519,8 @@ function gfxPending() {
 function gfxNote() {
   const p = gfxPending();
   let t = GFX.cal && GFX.preset === 'auto' ? 'O modo Automático escolheu ' + GFX.cal.p + ' a ' + Math.round(GFX.cal.scale * 100) + '% (' + GFX.cal.ms + ' ms por quadro na medição). ' : '';
-  if (GX.dp === 'auto') t += 'No Automático o jogo mede o aparelho ao reiniciar e escolhe a melhor combinação.';
-  else if (GX.dp === 'custom') t += 'Personalizado.';
+  if (GX.dp === 'auto') t += 'No Automático o jogo mede o aparelho ao reiniciar e escolhe a melhor combinação. No Personalizado, alterações de resolução, sombras, amostras e reflexos são aplicadas após reiniciar.';
+  else if (GX.dp === 'custom') t += 'Personalizado. Menos amostras e atualizações mais espaçadas reduzem a carga da GPU; resolução menor costuma ser o ajuste de maior impacto.';
   if (!GFX.canFs) t += ' Para tela cheia no iPhone/iPad: Compartilhar → Adicionar à Tela de Início.';
   GX.note.textContent = t; GX.btnA.textContent = p ? 'Aplicar e reiniciar' : 'Aplicar';
 }
@@ -8580,6 +8609,10 @@ function tiltSave() { try { localStorage.setItem('uno-tilt', TCH.want ? '1' : '0
 function tiltView(a) {
   // Mantém o frame e a interface imóveis; a rotação é aplicada à câmera 3D.
   TCH.tVis = Math.max(-T_TILT_VIS, Math.min(T_TILT_VIS, a));
+}
+function tiltAngleDelta(target, current) {
+  // Menor diferença angular, evitando saltos de +179° para -179° no sensor.
+  return ((target - current + 540) % 360) - 180;
 }
 function tiltSteer() {
   const T = TCH, a = T.tSm < 0 ? -T.tSm : T.tSm;
@@ -8727,8 +8760,12 @@ function touchLoop(t) {
   w.prev = w.rot;
   const u = w.rot / T_MAXROT, au = u < 0 ? -u : u;
   if (tilt) {
-    T.tSm += (T.tRaw - T.tSm) * (1 - Math.exp(-dt * 22));    // direção: filtrada
-    T.tVis += (T.tRaw - T.tVis) * (1 - Math.exp(-dt * 50));  // imagem: quase sem atraso
+    const steerDelta = tiltAngleDelta(T.tRaw, T.tSm);
+    const visualDelta = tiltAngleDelta(T.tRaw, T.tVis);
+    // Dois filtros independentes: a direção responde com firmeza; a rotação visual é mais amortecida.
+    T.tSm += steerDelta * (1 - Math.exp(-dt * 15));
+    if (Math.abs(visualDelta) > 0.12) T.tVis += visualDelta * (1 - Math.exp(-dt * 8.5));
+    T.tVis = Math.max(-T_TILT_VIS, Math.min(T_TILT_VIS, T.tVis));
     T.str = tiltSteer(); tiltView(T.tVis);
   } else T.str = au < 0.01 ? 0 : (u < 0 ? -1 : 1) * au * (0.4 + 0.6 * au);   // curva suave no centro, como a do controle
   const sm = (cur, tg) => { cur += (tg - cur) * (1 - Math.exp(-dt * (tg > cur ? 14 : 30))); return tg === 1 && cur > 0.985 ? 1 : tg === 0 && cur < 0.02 ? 0 : cur; };

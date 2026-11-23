@@ -12,7 +12,7 @@
 <title>Uno com escada — circuito</title>
 <style>
 html,body{margin:0;height:100%;background:#000;overflow:hidden;font:14px/1.4 -apple-system,Helvetica,Arial,sans-serif;color:#ddd}
-#c{position:absolute;inset:0;margin:auto;width:100vw;height:100vh;height:100dvh;display:block;object-fit:contain}
+#c{position:fixed;inset:0;margin:0;width:100vw;height:100vh;height:100dvh;display:block;object-fit:cover;object-position:50% 50%}
 #msg{position:absolute;left:0;right:0;top:45%;text-align:center;letter-spacing:.08em;white-space:pre-wrap}
 #hint{position:absolute;left:14px;bottom:10px;opacity:.75;text-shadow:0 1px 2px #000;transition:opacity 1.5s;pointer-events:none}
 #hg,#ht,#hs,#tag,#ui{display:none;position:absolute;pointer-events:none}
@@ -3003,8 +3003,17 @@ const GFX = (() => {
   return Object.assign(r, { touch, forced: !!forced, canFs, fs: st.fs === undefined ? touch : !!st.fs, raw: st, worst: 0 });
 })();
 // tamanho (px CSS) em que a resolução é calculada. Com "tela cheia" ligada usa o da tela, para que ao entrar em tela cheia a proporção bata
+function gfxViewportSize() {
+  // O visualViewport acompanha a área realmente visível no celular, inclusive
+  // quando as barras do navegador aparecem/desaparecem ou a tela é girada.
+  const vv = window.visualViewport;
+  const w = vv && vv.width > 0 ? vv.width : (document.documentElement.clientWidth || innerWidth);
+  const h = vv && vv.height > 0 ? vv.height : (document.documentElement.clientHeight || innerHeight);
+  return [Math.max(1, w), Math.max(1, h)];
+}
 function gfxBaseSize() {
-  const w = innerWidth, h = innerHeight;
+  const [w, h] = gfxViewportSize();
+  // Em tela cheia horizontal, usa a dimensão lógica nativa do painel.
   if (GFX.fs && GFX.canFs && w >= h) return [Math.max(screen.width, screen.height), Math.min(screen.width, screen.height)];
   return [w, h];
 }
@@ -7587,6 +7596,9 @@ function gameCamera() {
     const k = 1 - Math.exp(-dt * 16); GS.tvAim[0] += (ax - GS.tvAim[0]) * k; GS.tvAim[1] += (ay - GS.tvAim[1]) * k; GS.tvAim[2] += (az - GS.tvAim[2]) * k; GS.tvFov += (fov - GS.tvFov) * (1 - Math.exp(-dt * 3));
     q[0] = tx; q[1] = ty; q[2] = tz; q[3] = GS.tvAim[0]; q[4] = GS.tvAim[1]; q[5] = GS.tvAim[2]; q[6] = GS.tvFov; q[7] = 0;
   }
+  // No modo de inclinação, gira apenas a orientação da câmera 3D.
+  // O canvas, os controles e as bordas da tela permanecem fixos.
+  if (TCH.tilt && TCH.m === 'jogo') q[7] += TCH.tVis * 0.017453292;
   // sombras: com a lente longa da TV, as cascatas acompanham o carro
   R.casc.focusOn = GS.cam === 2; if (R.casc.focusOn) { R.casc.focus[0] = GS.cx; R.casc.focus[1] = GS.cy + 0.6; R.casc.focus[2] = GS.cz; }
   setCameraQ();
@@ -8324,6 +8336,7 @@ async function main() {
     setMsg(''); const hint = document.getElementById('hint'); if (hint) setTimeout(() => { hint.style.opacity = 0; }, 9000);
     if (GAME.ui) uiInit();
     GAME.ready = true;
+    gfxFit(); gfxViewportChanged();
     if (!GAME.capture) requestAnimationFrame(rafLoop);
   } catch (e) { setMsg('erro: ' + e.message); console.error(e); GAME.error = e.message; }
 }
@@ -8353,12 +8366,41 @@ function gfxFs(on) {
     } else if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
   } catch (e) { /* o navegador recusou */ }
 }
-// ajusta como o quadro do jogo ocupa a tela: preenche (corta pouco) quando a proporção difere só um pouco, em vez de deixar faixas pretas
+// Faz o quadro ocupar a área visível inteira. O canvas continua com sua resolução
+// interna de renderização; cover evita barras pretas quando a proporção do aparelho
+// não é exatamente a mesma da resolução que foi usada na inicialização.
 function gfxFit() {
   const c = $('c'); if (!c || !G.W) return;
-  const d = Math.abs((G.W / G.H) / (innerWidth / innerHeight) - 1);
-  c.style.objectFit = d > 0.004 && d < 0.2 ? 'cover' : 'contain';
+  c.style.objectFit = 'cover';
+  c.style.objectPosition = '50% 50%';
 }
+// Se o aparelho girar depois que o WebGPU já foi inicializado, a proporção das
+// texturas internas também precisa ser refeita. Recarrega uma vez por proporção,
+// usando a nova área visível como base; não tenta redimensionar texturas em uso.
+let _gfxViewportTimer = 0;
+function gfxViewportChanged() {
+  clearTimeout(_gfxViewportTimer);
+  _gfxViewportTimer = setTimeout(() => {
+    const c = $('c'); if (!c || !G.W || !G.H || GAME.capture) return;
+    const r = c.getBoundingClientRect();
+    if (!(r.width > 0 && r.height > 0)) return;
+    const ratio = r.width / r.height, current = G.W / G.H;
+    const diff = Math.abs(current / ratio - 1);
+    if (diff > 0.07) {
+      const key = (ratio >= 1 ? 'landscape:' : 'portrait:') + ratio.toFixed(2);
+      try {
+        if (sessionStorage.getItem('uno-viewport-reload') === key) return;
+        sessionStorage.setItem('uno-viewport-reload', key);
+      } catch (e) { /* segue com cover se o armazenamento estiver indisponível */ }
+      location.reload();
+    } else {
+      try { sessionStorage.removeItem('uno-viewport-reload'); } catch (e) {}
+    }
+  }, 350);
+}
+addEventListener('resize', gfxViewportChanged, { passive: true });
+addEventListener('orientationchange', gfxViewportChanged, { passive: true });
+if (window.visualViewport) visualViewport.addEventListener('resize', gfxViewportChanged, { passive: true });
 function gfxFrameCap(worst) {
   const h = Q.get('hz'); if (h === '120') return 0; if (h === '60') return 14.6;
   const f = GFX.s.fps; return f === 30 ? 31 : f === 60 ? 14.6 : f === 'max' ? 0 : (worst > 6.2 ? 14.6 : 0);
@@ -8536,13 +8578,8 @@ function tiltRead(e) {
 }
 function tiltSave() { try { localStorage.setItem('uno-tilt', TCH.want ? '1' : '0'); } catch (e) { /* vale só nesta sessão */ } }
 function tiltView(a) {
-  const T = TCH, c = T.cv || (T.cv = $('c')); if (!c) return;
-  if (Math.abs(a - T.tShown) < 0.03) return; T.tShown = a;
-  if (Math.abs(a) < 0.03) { c.style.transform = ''; c.style.willChange = ''; return; }
-  const v = Math.max(-T_TILT_VIS, Math.min(T_TILT_VIS, a)), r = Math.abs(v) * 0.017453292;
-  const cover = Math.cos(r) + Math.max(innerWidth / innerHeight, innerHeight / innerWidth) * Math.sin(r);
-  c.style.transform = 'rotate(' + (-v).toFixed(2) + 'deg) scale(' + (1 + T_TILT_ZOOM * (cover - 1)).toFixed(3) + ')';
-  c.style.willChange = 'transform';
+  // Mantém o frame e a interface imóveis; a rotação é aplicada à câmera 3D.
+  TCH.tVis = Math.max(-T_TILT_VIS, Math.min(T_TILT_VIS, a));
 }
 function tiltSteer() {
   const T = TCH, a = T.tSm < 0 ? -T.tSm : T.tSm;
